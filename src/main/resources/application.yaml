@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: ti-agent
+  ai:
+    openai:
+      api-key: <api-key>
+      base-url: <base-url>
+      chat:
+        options:
+          model: <model>
+  shell:
+    interactive:
+      enabled: true
+    noninteractive:
+      enabled: false
