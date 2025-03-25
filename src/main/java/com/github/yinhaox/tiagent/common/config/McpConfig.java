@@ -30,7 +30,7 @@ public class McpConfig {
     public McpSyncClient mcpClient(@Value("${mcp.sqlite.path}") String path) {
         System.out.println("sqlite path: " + path);
         var stdioParams = ServerParameters.builder("uvx").args("mcp-server-sqlite", "--db-path", path).build();
-        var mcpClient = McpClient.sync(new StdioClientTransport(stdioParams)).requestTimeout(Duration.ofSeconds(10)).build();
+        var mcpClient = McpClient.sync(new StdioClientTransport(stdioParams)).requestTimeout(Duration.ofSeconds(30)).build();
         mcpClient.initialize();
         return mcpClient;
     }

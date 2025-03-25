@@ -7,8 +7,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.context.annotation.Lazy;
@@ -19,7 +17,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -33,8 +30,6 @@ public class ChatController {
     private final List<Message> inputHistory = new LinkedList<>();
 
     private final List<Message> outputHistory = new LinkedList<>();
-
-    private final Pattern thinkPattern = Pattern.compile("(\\s*(?:<think>)?.*?</think>\\s*)");
 
     public ChatController(Terminal terminal, ChatClient.Builder builder, List<ToolCallbackProvider> toolCallbackProviders) {
         this.terminal = terminal;
@@ -53,22 +48,15 @@ public class ChatController {
             print("AI> ");
             Prompt prompt = getPrompt(input);
             ChatClient.ChatClientRequestSpec clientRequestSpec = chatClient.prompt(prompt).user(input);
-            ChatClient.CallResponseSpec callResponseSpec = clientRequestSpec.call();
-            ChatResponse chatResponse = callResponseSpec.chatResponse();
-            if (chatResponse == null) {
-                log.info("chatResponse is null");
-                return;
-            }
-            Generation result = chatResponse.getResult();
-            AssistantMessage output = result.getOutput();
-            String text = output.getText();
-            String message = text;
-//            String message = RegExUtils.removeFirst(text, thinkPattern);
-
-            AssistantMessage assistantMessage = new AssistantMessage(message, output.getMetadata(), output.getToolCalls(), output.getMedia());
-            outputHistory.add(assistantMessage);
-
-            print(message);
+            StringBuilder sb = new StringBuilder();
+            clientRequestSpec.stream().content().doOnNext(msg -> {
+                sb.append(msg);
+                print(msg);
+            }).doOnError(err -> {
+                log.warn("call error.", err);
+            }).doOnComplete(() -> {
+                outputHistory.add(new AssistantMessage(sb.toString()));
+            }).blockLast();
             print("\n");
         } catch (Exception e) {
             print("\n");
